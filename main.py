@@ -17,7 +17,7 @@ def main():
 
     #Create a folder to store the csv files
     path = os.getcwd()
-    path += "\csvs"
+    path += "/csvs"
     isExist = os.path.exists(path)
     if not isExist:
         os.mkdir(path)
@@ -31,28 +31,52 @@ def main():
             #Create a pdf reader object
             pdfReader = PyPDF2.PdfReader(pdfFileObj)
             #Remove the .pdf from the file name
-            file = file[1:-4]
+            file = file[0:-4]
             print(file)
             #Create a csv file with the same name as the pdf
-            csvFile = open("csvs/" + file + ".csv", 'w')
+            csvFile = open("csvs/" + file + ".csv", 'w', encoding='utf-8-sig')
+            #Write header for csv file
+            csvFile.write("Text,Null copula,Person/num. agreement,Multiple negators,Existential it/dey,Perfect done,Remote past BIN,Habitual be")
             #Loop through all the pages in the pdf
             for page in pdfReader.pages:
                 #Clean the text for Rezonator
                 #Skip the first page
                 if page == pdfReader.pages[0]:
                     continue
+                
+                #Store the text in a variable
+                pageText = page.extract_text()
 
                 #Change the text so that it is usable in Rezonator
-                #Replave two new lines with one new line
-                page.extract_text().replace("\n\n", "\n")
+                #replace all commas with semicolons
+                pageText = pageText.replace(",", ";")
+                #Delete all new lines
+                pageText = pageText.replace("\n", "")
+                #Replace all double spaces with single spaces
+                pageText = pageText.replace("  ", " ")
+                #For every capitial letter followed by a colon add a new line
+                count = 0
+                for i in range(len(pageText)):
+                    i += count
+                    if pageText[i].isupper() and pageText[i + 1] == ":":
+                        pageText = pageText[:i - 1] + "\n" + pageText[i - 1:]
+                        count += 1
+                #If it is the first page delete all text before the first new line
+                if page == pdfReader.pages[1]:
+                    pageText = pageText[pageText.find("\n"):]
 
+                #Remove all text after and including "[End of interview]"
+                pageText = pageText[:pageText.find("[End of interview]")]
+                #Remove all text before and including "Page" + the page number
+                if pdfReader.get_page_number(page) != 1:
+                    headerSpot = "Page " + str(pdfReader.get_page_number(page))
+                    pageText = pageText[pageText.find(headerSpot) + len(headerSpot):]
                 #Extract the text from the page and write it to the csv file
-                csvFile.write(page.extract_text())
+                csvFile.write(pageText)
             #Close the csv file
             csvFile.close()
         #Close the pdf file
         pdfFileObj.close()
-        break
 
 
 if __name__ == "__main__":
